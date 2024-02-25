@@ -22,11 +22,11 @@ Nomadinspect will query all the jobs deployed in the nomad namespaces included i
 nomadinspect -namespace admin -namespace test -namespace utilities -match admin -match notallowed -and
 ```
 
-![Spinner Screen](https://github.com/smorenodp/nomadinspect/blob/master/images/spinner_screen.png)
+![Spinner Screen](https://github.com/smorenodp/nomadinspect/blob/main/images/spinner_screen.png)
 
 The first screen is the loading one, in this screen it shows feedback about the namespaces it's looking and the jobs contained in them. After obtaining all the information, it transitions into the list screen.
 
-![List Screen](https://github.com/smorenodp/nomadinspect/blob/master/images/list_screen.png)
+![List Screen](https://github.com/smorenodp/nomadinspect/blob/main/images/list_screen.png)
 
 In the list screen you can review all the jobs that matched with the query sent, with the job name as the title and the namespace as the subtitle. You can press `enter` to review the job definition with the matches highlighted.
 
