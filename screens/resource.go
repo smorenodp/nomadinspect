@@ -2,6 +2,7 @@ package screens
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -30,7 +31,7 @@ type ResourceScreen struct {
 	Content       string
 	Name          string
 	Namespace     string
-	Matches       []string
+	Matches       []regexp.Regexp
 	MatchedLines  []int
 	matchedIndex  int
 	matchedLoaded bool
@@ -107,7 +108,9 @@ func (r *ResourceScreen) helpView() string {
 
 func (r *ResourceScreen) highlightMatched() {
 	for _, m := range r.Matches {
-		r.Content = strings.ReplaceAll(r.Content, m, fmt.Sprintf("\x1B[31m%s\x1B[0m", m))
+		for _, f := range m.FindAllString(r.Content, -1) {
+			r.Content = strings.ReplaceAll(r.Content, f, fmt.Sprintf("\x1B[31m%s\x1B[0m", f))
+		}
 	}
 }
 
@@ -115,7 +118,7 @@ func (r *ResourceScreen) getMatchedLines() {
 	lines := strings.Split(r.Content, "\n")
 	for index, line := range lines {
 		for _, m := range r.Matches {
-			if strings.Contains(line, m) {
+			if m.MatchString(line) {
 				r.MatchedLines = append(r.MatchedLines, index)
 			}
 		}
@@ -137,7 +140,9 @@ func (r *ResourceScreen) setBold() {
 	lines := strings.Split(r.Content, "\n")
 	line := lines[index]
 	for _, m := range r.Matches {
-		line = strings.ReplaceAll(line, fmt.Sprintf("\x1B[31m%s\x1B[0m", m), fmt.Sprintf("\x1B[31;1;4m%s\x1B[0m", m))
+		for _, f := range m.FindAllString(r.Content, -1) {
+			line = strings.ReplaceAll(line, f, fmt.Sprintf("\x1B[31;1m%s\x1B[0m", f))
+		}
 	}
 	lines[index] = line
 	r.viewPort.SetContent(strings.Join(lines, "\n"))
