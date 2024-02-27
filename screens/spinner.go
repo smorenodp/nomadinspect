@@ -2,7 +2,7 @@ package screens
 
 import (
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,7 +13,7 @@ import (
 
 type SpinnerScreen struct {
 	actualNs    string
-	matches     []string
+	matches     []regexp.Regexp
 	spinner     spinner.Model
 	client      nomad.NomadClient
 	err         error
@@ -33,7 +33,7 @@ type Job struct {
 	Namespace string
 	Content   string
 	Raw       *api.Job
-	Matches   []string
+	Matches   []regexp.Regexp
 }
 
 func (r *Job) Title() string       { return r.ID }
@@ -76,9 +76,17 @@ func (s SpinnerScreen) retrieveInfo() {
 			if err != nil {
 				s.endChan <- "Error inspecting job"
 			}
-			matches := []string{}
+			matches := []regexp.Regexp{}
 			for _, m := range s.matches {
-				if strings.Contains(content, m) {
+				// if strings.Contains(content, m) {
+				// 	matches = append(matches, m)
+				// } else if s.and {
+				// 	break
+				// }
+				if m.MatchString(content) {
+					// f := m.FindAllString(content, -1)
+					// s.file.WriteString(fmt.Sprintf("The matches are %+v with findings %s\n", s.matches, f))
+					// matches = append(matches, f...)
 					matches = append(matches, m)
 				} else if s.and {
 					break
@@ -111,11 +119,15 @@ func (s *SpinnerScreen) init() tea.Msg {
 }
 
 func NewSpinnerScreen(namespaces, matches []string, and bool) SpinnerScreen {
+	var r []regexp.Regexp
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("160"))
 	client, _ := nomad.New()
-	return SpinnerScreen{spinner: s, client: client, matches: matches, namespaces: namespaces, and: and, nsChan: make(chan string), matchedChan: make(chan Job), endChan: make(chan string), jobChan: make(chan string), resources: make([]string, 5)}
+	for _, m := range matches {
+		r = append(r, *regexp.MustCompile(m))
+	}
+	return SpinnerScreen{spinner: s, client: client, matches: r, namespaces: namespaces, and: and, nsChan: make(chan string), matchedChan: make(chan Job), endChan: make(chan string), jobChan: make(chan string), resources: make([]string, 5)}
 }
 
 func (s SpinnerScreen) Start() tea.Cmd {
