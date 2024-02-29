@@ -2,7 +2,6 @@ package screens
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -31,7 +30,7 @@ type ResourceScreen struct {
 	Content       string
 	Name          string
 	Namespace     string
-	Matches       []regexp.Regexp
+	Matches       []Match
 	MatchedLines  []int
 	matchedIndex  int
 	matchedLoaded bool
@@ -108,8 +107,10 @@ func (r *ResourceScreen) helpView() string {
 
 func (r *ResourceScreen) highlightMatched() {
 	for _, m := range r.Matches {
-		for _, f := range m.FindAllString(r.Content, -1) {
-			r.Content = strings.ReplaceAll(r.Content, f, fmt.Sprintf("\x1B[31m%s\x1B[0m", f))
+		if !m.Not {
+			for _, f := range m.Regex.FindAllString(r.Content, -1) {
+				r.Content = strings.ReplaceAll(r.Content, f, fmt.Sprintf("\x1B[31m%s\x1B[0m", f))
+			}
 		}
 	}
 }
@@ -118,20 +119,24 @@ func (r *ResourceScreen) getMatchedLines() {
 	lines := strings.Split(r.Content, "\n")
 	for index, line := range lines {
 		for _, m := range r.Matches {
-			if m.MatchString(line) {
-				r.MatchedLines = append(r.MatchedLines, index)
+			if !m.Not {
+				if m.Regex.MatchString(line) {
+					r.MatchedLines = append(r.MatchedLines, index)
+				}
 			}
 		}
 	}
 }
 
 func (r *ResourceScreen) move2Matched() {
-	index := r.MatchedLines[r.matchedIndex] - (r.viewPort.VisibleLineCount() / 2)
-	r.viewPort.SetYOffset(index)
-	r.setBold()
-	r.matchedIndex++
-	if r.matchedIndex == len(r.MatchedLines) {
-		r.matchedIndex = 0
+	if len(r.MatchedLines) > 0 {
+		index := r.MatchedLines[r.matchedIndex] - (r.viewPort.VisibleLineCount() / 2)
+		r.viewPort.SetYOffset(index)
+		r.setBold()
+		r.matchedIndex++
+		if r.matchedIndex == len(r.MatchedLines) {
+			r.matchedIndex = 0
+		}
 	}
 }
 
@@ -140,8 +145,10 @@ func (r *ResourceScreen) setBold() {
 	lines := strings.Split(r.Content, "\n")
 	line := lines[index]
 	for _, m := range r.Matches {
-		for _, f := range m.FindAllString(r.Content, -1) {
-			line = strings.ReplaceAll(line, f, fmt.Sprintf("\x1B[31;1m%s\x1B[0m", f))
+		if !m.Not {
+			for _, f := range m.Regex.FindAllString(r.Content, -1) {
+				line = strings.ReplaceAll(line, f, fmt.Sprintf("\x1B[31;1m%s\x1B[0m", f))
+			}
 		}
 	}
 	lines[index] = line

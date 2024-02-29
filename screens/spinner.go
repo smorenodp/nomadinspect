@@ -13,7 +13,7 @@ import (
 
 type SpinnerScreen struct {
 	actualNs    string
-	matches     []regexp.Regexp
+	matches     []Match
 	spinner     spinner.Model
 	client      nomad.NomadClient
 	err         error
@@ -33,7 +33,13 @@ type Job struct {
 	Namespace string
 	Content   string
 	Raw       *api.Job
-	Matches   []regexp.Regexp
+	Matches   []Match
+}
+
+type Match struct {
+	raw   string
+	Regex regexp.Regexp
+	Not   bool
 }
 
 func (r *Job) Title() string       { return r.ID }
@@ -76,17 +82,10 @@ func (s SpinnerScreen) retrieveInfo() {
 			if err != nil {
 				s.endChan <- "Error inspecting job"
 			}
-			matches := []regexp.Regexp{}
+			matches := []Match{}
 			for _, m := range s.matches {
-				// if strings.Contains(content, m) {
-				// 	matches = append(matches, m)
-				// } else if s.and {
-				// 	break
-				// }
-				if m.MatchString(content) {
-					// f := m.FindAllString(content, -1)
-					// s.file.WriteString(fmt.Sprintf("The matches are %+v with findings %s\n", s.matches, f))
-					// matches = append(matches, f...)
+				matched := (m.Regex.MatchString(content) == !m.Not)
+				if matched {
 					matches = append(matches, m)
 				} else if s.and {
 					break
@@ -118,16 +117,20 @@ func (s *SpinnerScreen) init() tea.Msg {
 	return s.CheckSelect()
 }
 
-func NewSpinnerScreen(namespaces, matches []string, and bool) SpinnerScreen {
-	var r []regexp.Regexp
+func NewSpinnerScreen(namespaces, matches []string, and bool, not []string) SpinnerScreen {
+	var matchList []Match
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("160"))
 	client, _ := nomad.New()
 	for _, m := range matches {
-		r = append(r, *regexp.MustCompile(m))
+		matchList = append(matchList, Match{raw: m, Regex: *regexp.MustCompile(m), Not: false})
 	}
-	return SpinnerScreen{spinner: s, client: client, matches: r, namespaces: namespaces, and: and, nsChan: make(chan string), matchedChan: make(chan Job), endChan: make(chan string), jobChan: make(chan string), resources: make([]string, 5)}
+	for _, n := range not {
+		matchList = append(matchList, Match{raw: n, Regex: *regexp.MustCompile(n), Not: true})
+	}
+
+	return SpinnerScreen{spinner: s, client: client, matches: matchList, namespaces: namespaces, and: and, nsChan: make(chan string), matchedChan: make(chan Job), endChan: make(chan string), jobChan: make(chan string), resources: make([]string, 5)}
 }
 
 func (s SpinnerScreen) Start() tea.Cmd {
