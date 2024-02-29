@@ -16,15 +16,15 @@ type Model struct {
 	err        error
 }
 
-func New(namespaces, matches []string, and bool) Model {
-	s := screens.NewSpinnerScreen(namespaces, matches, and)
+func New(namespaces, matches []string, and bool, not []string) Model {
+	s := screens.NewSpinnerScreen(namespaces, matches, and, not)
 	return Model{screen: s}
 }
 
 func (m Model) Run() error {
 	var err error
 
-	if _, err = tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err = tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseAllMotion()).Run(); err != nil {
 		return err
 	}
 
